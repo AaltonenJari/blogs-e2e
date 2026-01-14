@@ -15,7 +15,9 @@ describe('Blog app', () => {
   })
 
   test('Login form is shown', async ({ page }) => {
-	await page.getByRole('button', { name: 'login' }).click()
+	  await page.getByRole('button', { name: 'login' }).click()
 	
+    const locator = page.getByText('Log in to application')
+    await expect(locator).toBeVisible()
   })
 })
