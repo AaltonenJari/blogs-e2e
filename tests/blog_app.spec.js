@@ -52,5 +52,20 @@ describe('Blog app', () => {
       const likes = page.getByText('likes 1')
       await expect(likes).toBeVisible()
     })
+
+    test('user can delete their blog', async ({ page }) => {
+      await ceaateBlog(page, 'Deleting blogs', 'Delete Author', 'http://delete.dev')
+      await page.getByRole('button', { name: 'view' }).click()
+
+      // Handle confirmation dialog on delete
+      page.on('dialog', async dialog => {
+        expect(dialog.type()).toBe('confirm')
+        await dialog.accept()
+      })
+
+      const deleteButton = page.getByRole('button', { name: 'remove' })
+      await deleteButton.click()
+      await expect(page.getByText('Deleting blogs Delete Author')).not.toBeVisible()
+    })
   })
 })
