@@ -43,5 +43,14 @@ describe('Blog app', () => {
       await ceaateBlog(page, 'Testing with Playwright', 'Playwright Author', 'http://playwright.dev')
       await expect(page.getByText('Testing with Playwright Playwright Author')).toBeVisible()
     })
+
+    test('user can like a blog', async ({ page }) => {
+      await ceaateBlog(page, 'Liking blogs', 'Like Author', 'http://like.dev')
+      await page.getByRole('button', { name: 'view' }).click()
+      const likeButton = page.getByRole('button', { name: 'like' })
+      await likeButton.click()
+      const likes = page.getByText('likes 1')
+      await expect(likes).toBeVisible()
+    })
   })
 })
