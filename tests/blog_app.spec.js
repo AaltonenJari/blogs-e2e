@@ -37,6 +37,7 @@ describe('Blog app', () => {
   describe('When logged in', () => {
     beforeEach(async ({ page }) => {
       await loginWith(page, 'mluukkai', 'salainen')
+      await expect(page.getByText('Matti Luukkainen logged in')).toBeVisible()
     })
 
     test('a new blog can be created', async ({ page }) => {
@@ -67,5 +68,47 @@ describe('Blog app', () => {
       await deleteButton.click()
       await expect(page.getByText('Deleting blogs Delete Author')).not.toBeVisible()
     })
+
+    test('users cannot delete blogs created by others', async ({ page, request }) => {
+      // Create a blog with the first user
+      await ceaateBlog(page, 'Other users blog', 'Other Author', 'http://other.dev')
+      await page.getByRole('button', { name: 'logout' }).click() 
+      // Create a second user
+      await request.post('http://localhost:3003/api/users', {
+        data: { 
+          name: 'Second User',
+          username: 'seconduser', 
+          password: 'password123'
+        }
+      })  
+      // Login as the second user
+      await loginWith(page, 'seconduser', 'password123')
+      await expect(page.getByText('Second User logged in')).toBeVisible()
+
+      await page.getByRole('button', { name: 'view' }).click()
+      const deleteButton = page.getByRole('button', { name: 'remove' })
+      await expect(deleteButton).not.toBeVisible()
+    })
+
+    test ('only the user who created a blog can see the delete button', async ({ page, request }) => {
+      // Create a blog with the first user
+      await ceaateBlog(page, 'Visibility of delete button', 'Visibility Author', 'http://visibility.dev') 
+      await page.getByRole('button', { name: 'logout' }).click()
+      // Create a second user
+      await request.post('http://localhost:3003/api/users', {
+        data: { 
+          name: 'Third User',
+          username: 'thirduser', 
+          password: 'password456'
+        }
+      })
+      // Login as the second user
+      await loginWith(page, 'thirduser', 'password456')
+      await expect(page.getByText('Third User logged in')).toBeVisible()
+      await page.getByRole('button', { name: 'view' }).click()
+      const deleteButton = page.getByRole('button', { name: 'remove' })
+      await expect(deleteButton).not.toBeVisible()
+    })
+    
   })
 })
