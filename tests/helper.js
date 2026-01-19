@@ -7,10 +7,20 @@ const loginWith = async (page, username, password)  => {
 
 const ceaateBlog = async (page, title, author, url) => {
   await page.getByRole('button', { name: 'new blog' }).click()
+
   await page.getByLabel('title:').fill(title)
   await page.getByLabel('author:').fill(author)
   await page.getByLabel('url:').fill(url)
+
+  const responsePromise = page.waitForResponse(response =>
+    response.url().includes('/api/blogs') && response.request().method() === 'POST'
+  )
+
   await page.getByRole('button', { name: 'create' }).click()
+  await responsePromise
 }
 
-export { loginWith, ceaateBlog }
+const blogByTitle = (page, title) =>
+  page.getByTestId('blog').filter({ hasText: title })
+
+export { loginWith, ceaateBlog, blogByTitle }

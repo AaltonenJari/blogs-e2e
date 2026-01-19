@@ -1,5 +1,5 @@
 const { test, expect, beforeEach, describe } = require('@playwright/test')
-const { loginWith, ceaateBlog } = require('./helper')
+const { loginWith, ceaateBlog, blogByTitle } = require('./helper')
 
 describe('Blog app', () => {
   beforeEach(async ({ page, request }) => {
@@ -110,5 +110,43 @@ describe('Blog app', () => {
       await expect(deleteButton).not.toBeVisible()
     })
     
-  })
+    test.only('blogs are ordered according to likes', async ({ page }) => {
+      // Create multiple blogs
+      await ceaateBlog(page, 'First Blog', 'Author One', 'http://first.dev')
+      await ceaateBlog(page, 'Second Blog', 'Author Two', 'http://second.dev')
+      await ceaateBlog(page, 'Third Blog', 'Author Three', 'http://third.dev')
+
+      // Like the blogs to set different like counts
+      const first = blogByTitle(page, 'First Blog')
+      const second = blogByTitle(page, 'Second Blog')
+      const third = blogByTitle(page, 'Third Blog')
+
+      // First blog gets 1 like
+      await expect(first).toBeVisible()
+      await first.getByRole('button', { name: 'view' }).click({ force: true })
+      await first.getByRole('button', { name: 'like' }).click({ force: true })
+
+      // Second blog gets 2 likes
+      await expect(second).toBeVisible()
+      await second.getByRole('button', { name: 'view' }).click({ force: true })
+     
+      await second.getByRole('button', { name: 'like' }).click({ force: true })
+      await second.getByRole('button', { name: 'like' }).click({ force: true })
+
+      // Third blog gets 3 likes
+      await expect(third).toBeVisible()
+      await third.getByRole('button', { name: 'view' }).click({ force: true })
+      await third.getByRole('button', { name: 'like' }).click({ force: true })
+      await third.getByRole('button', { name: 'like' }).click({ force: true })
+      await third.getByRole('button', { name: 'like' }).click({ force: true })
+
+      // Verify the order of blogs
+      const blogs = page.getByTestId('blog')
+
+      await expect(blogs.nth(0)).toContainText('Third Blog')
+      await expect(blogs.nth(1)).toContainText('Second Blog')
+      await expect(blogs.nth(2)).toContainText('First Blog')
+    })
+  
+  })  
 })
