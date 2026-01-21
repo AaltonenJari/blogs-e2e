@@ -31,51 +31,16 @@ const ceaateBlog = async (page, title, author, url) => {
 
   return blog.id
 }
+
 const likeBlog = async (page, blogId, times) => {
   const blog = page.getByTestId(`blog-${blogId}`)
-  await expect(blog).toBeVisible()
-
   const likeButton = blog.getByTestId(`like-${blogId}`)
   const likes = blog.getByTestId(`likes-${blogId}`)
 
   for (let i = 0; i < times; i++) {
-    const responsePromise = page.waitForResponse(response =>
-      response.url().includes(`/api/blogs/${blogId}`) &&
-      response.request().method() === 'PUT'
-    )
-
     await likeButton.click()
-    await responsePromise
-
     await expect(likes).toHaveText(`likes ${i + 1}`)
   }
 }
-
-
-const likeBlogO = async (page, blogId, times) => {
-  const blog = page.getByTestId(`blog-${blogId}`)
-  await expect(blog).toBeVisible()
-
-  // Ensure the blog details are visible
-  //await blog.getByRole('button', { name: 'view' }).click()
-  const toggle = blog.getByTestId('toggle-blog')
-  if (await toggle.isVisible()) {
-    await toggle.click()
-  }
-
-
-  for (let i = 0; i < times; i++) {
-    const likeButton = blog.getByTestId(`like-${blogId}`)
-    await expect(likeButton).toBeVisible()
-
-    await likeButton.click()
-
-    // Verify the like count has incremented
-    await expect(
-      blog.getByTestId(`likes-${blogId}`)
-    ).toHaveText(`likes ${i + 1}`)
-  }
-}
-
 
 export { loginWith, ceaateBlog, likeBlog }

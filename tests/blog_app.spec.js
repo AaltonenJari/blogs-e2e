@@ -121,24 +121,12 @@ describe('Blog app', () => {
       const second = page.getByTestId(`blog-${secondId}`)
       const third = page.getByTestId(`blog-${thirdId}`)
 
-      // First blog gets 1 like
-      await expect(first).toBeVisible()
-      await first.getByRole('button', { name: 'view' }).click()
       await likeBlog(page, firstId, 1)
-
-      // Second blog gets 2 likes
-      await expect(second).toBeVisible()
-      await second.getByRole('button', { name: 'view' }).click()
       await likeBlog(page, secondId, 2)
-
-      // Third blog gets 3 likes
-      await expect(third).toBeVisible()
-      await third.getByRole('button', { name: 'view' }).click()
-      await likeBlog(page, thirdId, 3)
+      await likeBlog(page, thirdId, 3)  
 
       // Verify the order of blogs based on likes
-      await expect(page.getByTestId('blog').nth(0))
-        .toContainText('Third Blog')
+      const blogs = page.locator('[data-testid^="blog-"]')
 
       await expect(blogs.nth(0)).toContainText('Third Blog')
       await expect(blogs.nth(1)).toContainText('Second Blog')
