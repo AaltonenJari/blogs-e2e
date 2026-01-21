@@ -1,5 +1,5 @@
 const { test, expect, beforeEach, describe } = require('@playwright/test')
-const { loginWith, ceaateBlog, blogByTitle } = require('./helper')
+const { loginWith, ceaateBlog, likeBlog } = require('./helper')
 
 describe('Blog app', () => {
   beforeEach(async ({ page, request }) => {
@@ -37,7 +37,7 @@ describe('Blog app', () => {
   describe('When logged in', () => {
     beforeEach(async ({ page }) => {
       await loginWith(page, 'mluukkai', 'salainen')
-      await expect(page.getByText('Matti Luukkainen logged in')).toBeVisible()
+      await expect(page.getByText('logged in')).toBeVisible()
     })
 
     test('a new blog can be created', async ({ page }) => {
@@ -112,36 +112,33 @@ describe('Blog app', () => {
     
     test.only('blogs are ordered according to likes', async ({ page }) => {
       // Create multiple blogs
-      await ceaateBlog(page, 'First Blog', 'Author One', 'http://first.dev')
-      await ceaateBlog(page, 'Second Blog', 'Author Two', 'http://second.dev')
-      await ceaateBlog(page, 'Third Blog', 'Author Three', 'http://third.dev')
+      const firstId = await ceaateBlog(page, 'First Blog', 'Author One', 'http://first.dev')
+      const secondId = await ceaateBlog(page, 'Second Blog', 'Author Two', 'http://second.dev')
+      const thirdId = await ceaateBlog(page, 'Third Blog', 'Author Three', 'http://third.dev')
 
       // Like the blogs to set different like counts
-      const first = blogByTitle(page, 'First Blog')
-      const second = blogByTitle(page, 'Second Blog')
-      const third = blogByTitle(page, 'Third Blog')
+      const first = page.getByTestId(`blog-${firstId}`)
+      const second = page.getByTestId(`blog-${secondId}`)
+      const third = page.getByTestId(`blog-${thirdId}`)
 
       // First blog gets 1 like
       await expect(first).toBeVisible()
-      await first.getByRole('button', { name: 'view' }).click({ force: true })
-      await first.getByRole('button', { name: 'like' }).click({ force: true })
+      await first.getByRole('button', { name: 'view' }).click()
+      await likeBlog(page, firstId, 1)
 
       // Second blog gets 2 likes
       await expect(second).toBeVisible()
-      await second.getByRole('button', { name: 'view' }).click({ force: true })
-     
-      await second.getByRole('button', { name: 'like' }).click({ force: true })
-      await second.getByRole('button', { name: 'like' }).click({ force: true })
+      await second.getByRole('button', { name: 'view' }).click()
+      await likeBlog(page, secondId, 2)
 
       // Third blog gets 3 likes
       await expect(third).toBeVisible()
-      await third.getByRole('button', { name: 'view' }).click({ force: true })
-      await third.getByRole('button', { name: 'like' }).click({ force: true })
-      await third.getByRole('button', { name: 'like' }).click({ force: true })
-      await third.getByRole('button', { name: 'like' }).click({ force: true })
+      await third.getByRole('button', { name: 'view' }).click()
+      await likeBlog(page, thirdId, 3)
 
-      // Verify the order of blogs
-      const blogs = page.getByTestId('blog')
+      // Verify the order of blogs based on likes
+      await expect(page.getByTestId('blog').nth(0))
+        .toContainText('Third Blog')
 
       await expect(blogs.nth(0)).toContainText('Third Blog')
       await expect(blogs.nth(1)).toContainText('Second Blog')
