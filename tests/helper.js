@@ -32,15 +32,13 @@ const ceaateBlog = async (page, title, author, url) => {
   return blog.id
 }
 
-const likeBlog = async (page, blogId, times) => {
-  const blog = page.getByTestId(`blog-${blogId}`)
-  const likeButton = blog.getByTestId(`like-${blogId}`)
-  const likes = blog.getByTestId(`likes-${blogId}`)
-
-  for (let i = 0; i < times; i++) {
-    await likeButton.click()
-    await expect(likes).toHaveText(`likes ${i + 1}`)
-  }
+const createBlogWithLikes = async (request, blog, likes, token) => {
+  await request.post('http://localhost:3003/api/blogs', {
+    data: { ...blog, likes },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
 }
 
-export { loginWith, ceaateBlog, likeBlog }
+export { loginWith, ceaateBlog, createBlogWithLikes }

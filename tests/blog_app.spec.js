@@ -1,7 +1,9 @@
 const { test, expect, beforeEach, describe } = require('@playwright/test')
-const { loginWith, ceaateBlog, likeBlog } = require('./helper')
+const { loginWith, ceaateBlog, createBlogWithLikes } = require('./helper')
 
 describe('Blog app', () => {
+  let token
+
   beforeEach(async ({ page, request }) => {
     await request.post('http://localhost:3003/api/testing/reset')
     await request.post('http://localhost:3003/api/users', {
@@ -11,6 +13,16 @@ describe('Blog app', () => {
         password: 'salainen'
       }
     })
+  
+    const loginResponse = await request.post('http://localhost:3003/api/login', {
+      data: {
+          username: 'mluukkai',
+          password: 'salainen'
+        }
+      })
+  
+    const body = await loginResponse.json()
+    token = body.token
 
     await page.goto('http://localhost:3000')
   })
@@ -46,17 +58,17 @@ describe('Blog app', () => {
     })
 
     test('user can like a blog', async ({ page }) => {
-      await ceaateBlog(page, 'Liking blogs', 'Like Author', 'http://like.dev')
-      await page.getByRole('button', { name: 'view' }).click()
-      const likeButton = page.getByRole('button', { name: 'like' })
+      const blogId = await ceaateBlog(page, 'Liking blogs', 'Like Author', 'http://like.dev')
+      const blog = page.getByTestId(`blog-${blogId}`)
+      const likeButton = blog.getByTestId(`like-${blogId}`)
       await likeButton.click()
       const likes = page.getByText('likes 1')
       await expect(likes).toBeVisible()
     })
 
     test('user can delete their blog', async ({ page }) => {
-      await ceaateBlog(page, 'Deleting blogs', 'Delete Author', 'http://delete.dev')
-      await page.getByRole('button', { name: 'view' }).click()
+      const blogId = await ceaateBlog(page, 'Deleting blogs', 'Delete Author', 'http://delete.dev')
+      page.getByTestId(`blog-${blogId}`).click()
 
       // Handle confirmation dialog on delete
       page.on('dialog', async dialog => {
@@ -71,7 +83,7 @@ describe('Blog app', () => {
 
     test('users cannot delete blogs created by others', async ({ page, request }) => {
       // Create a blog with the first user
-      await ceaateBlog(page, 'Other users blog', 'Other Author', 'http://other.dev')
+      const blogId = await ceaateBlog(page, 'Other users blog', 'Other Author', 'http://other.dev')
       await page.getByRole('button', { name: 'logout' }).click() 
       // Create a second user
       await request.post('http://localhost:3003/api/users', {
@@ -84,15 +96,16 @@ describe('Blog app', () => {
       // Login as the second user
       await loginWith(page, 'seconduser', 'password123')
       await expect(page.getByText('Second User logged in')).toBeVisible()
+      await expect(page.getByText('Other users blog Other Author')).toBeVisible()
 
-      await page.getByRole('button', { name: 'view' }).click()
+      page.getByTestId(`blog-${blogId}`).click()
       const deleteButton = page.getByRole('button', { name: 'remove' })
       await expect(deleteButton).not.toBeVisible()
     })
 
-    test ('only the user who created a blog can see the delete button', async ({ page, request }) => {
+    test('only the user who created a blog can see the delete button', async ({ page, request }) => {
       // Create a blog with the first user
-      await ceaateBlog(page, 'Visibility of delete button', 'Visibility Author', 'http://visibility.dev') 
+      const blogId = await ceaateBlog(page, 'Visibility of delete button', 'Visibility Author', 'http://visibility.dev') 
       await page.getByRole('button', { name: 'logout' }).click()
       // Create a second user
       await request.post('http://localhost:3003/api/users', {
@@ -105,33 +118,39 @@ describe('Blog app', () => {
       // Login as the second user
       await loginWith(page, 'thirduser', 'password456')
       await expect(page.getByText('Third User logged in')).toBeVisible()
-      await page.getByRole('button', { name: 'view' }).click()
+      await expect(page.getByText('Visibility of delete button Visibility Author')).toBeVisible()
+
+      page.getByTestId(`blog-${blogId}`).click()
       const deleteButton = page.getByRole('button', { name: 'remove' })
       await expect(deleteButton).not.toBeVisible()
     })
     
-    test.only('blogs are ordered according to likes', async ({ page }) => {
-      // Create multiple blogs
-      const firstId = await ceaateBlog(page, 'First Blog', 'Author One', 'http://first.dev')
-      const secondId = await ceaateBlog(page, 'Second Blog', 'Author Two', 'http://second.dev')
-      const thirdId = await ceaateBlog(page, 'Third Blog', 'Author Three', 'http://third.dev')
+    test('blogs are ordered according to likes', async ({ page, request }) => {
+      await createBlogWithLikes(request, {
+        title: 'First Blog',
+        author: 'Author One',
+        url: 'http://first.dev'
+      }, 1, token)
 
-      // Like the blogs to set different like counts
-      const first = page.getByTestId(`blog-${firstId}`)
-      const second = page.getByTestId(`blog-${secondId}`)
-      const third = page.getByTestId(`blog-${thirdId}`)
+      await createBlogWithLikes(request, {
+        title: 'Second Blog',
+        author: 'Author Two',
+        url: 'http://second.dev'
+      }, 2, token)
 
-      await likeBlog(page, firstId, 1)
-      await likeBlog(page, secondId, 2)
-      await likeBlog(page, thirdId, 3)  
+      await createBlogWithLikes(request, {
+        title: 'Third Blog',
+        author: 'Author Three',
+        url: 'http://third.dev'
+      }, 3, token)
 
-      // Verify the order of blogs based on likes
+      await page.reload()
       const blogs = page.locator('[data-testid^="blog-"]')
 
       await expect(blogs.nth(0)).toContainText('Third Blog')
       await expect(blogs.nth(1)).toContainText('Second Blog')
       await expect(blogs.nth(2)).toContainText('First Blog')
     })
-  
+
   })  
 })
