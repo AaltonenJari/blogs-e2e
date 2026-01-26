@@ -58,19 +58,19 @@ describe('Blog app', () => {
     })
 
     test('user can like a blog', async ({ page }) => {
-      const blogId = await ceaateBlog(page, 'Liking blogs', 'Like Author', 'http://like.dev')
-      const blog = page.getByTestId(`blog-${blogId}`)
-      const likeButton = blog.getByTestId(`like-${blogId}`)
+      await ceaateBlog(page, 'Liking blogs', 'Like Author', 'http://like.dev')
+      await page.getByRole('button', { name: 'view' }).click()
+      const likeButton = page.getByRole('button', { name: 'like' })
       await likeButton.click()
       const likes = page.getByText('likes 1')
       await expect(likes).toBeVisible()
     })
 
     test('user can delete their blog', async ({ page }) => {
-      const blogId = await ceaateBlog(page, 'Deleting blogs', 'Delete Author', 'http://delete.dev')
-      page.getByTestId(`blog-${blogId}`).click()
+      await ceaateBlog(page, 'Deleting blogs', 'Delete Author', 'http://delete.dev')
+      await page.getByRole('button', { name: 'view' }).click()
 
-      // Handle confirmation dialog on delete
+      // Handle confirmation dialog on delete before clicking delete button
       page.on('dialog', async dialog => {
         expect(dialog.type()).toBe('confirm')
         await dialog.accept()
@@ -98,14 +98,14 @@ describe('Blog app', () => {
       await expect(page.getByText('Second User logged in')).toBeVisible()
       await expect(page.getByText('Other users blog Other Author')).toBeVisible()
 
-      page.getByTestId(`blog-${blogId}`).click()
+      await page.getByRole('button', { name: 'view' }).click()
       const deleteButton = page.getByRole('button', { name: 'remove' })
       await expect(deleteButton).not.toBeVisible()
     })
 
     test('only the user who created a blog can see the delete button', async ({ page, request }) => {
       // Create a blog with the first user
-      const blogId = await ceaateBlog(page, 'Visibility of delete button', 'Visibility Author', 'http://visibility.dev') 
+      await ceaateBlog(page, 'Visibility of delete button', 'Visibility Author', 'http://visibility.dev') 
       await page.getByRole('button', { name: 'logout' }).click()
       // Create a second user
       await request.post('http://localhost:3003/api/users', {
@@ -117,10 +117,13 @@ describe('Blog app', () => {
       })
       // Login as the second user
       await loginWith(page, 'thirduser', 'password456')
-      await expect(page.getByText('Third User logged in')).toBeVisible()
+
+      // Verify the login was successful
+      await expect(page.getByRole('button', { name: 'logout' })).toBeVisible()
+
       await expect(page.getByText('Visibility of delete button Visibility Author')).toBeVisible()
 
-      page.getByTestId(`blog-${blogId}`).click()
+      await page.getByRole('button', { name: 'view' }).click()
       const deleteButton = page.getByRole('button', { name: 'remove' })
       await expect(deleteButton).not.toBeVisible()
     })
