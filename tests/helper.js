@@ -1,6 +1,27 @@
 const { expect } = require('@playwright/test')
 
-const loginWith = async (page, username, password)  => {
+const loginWith = async (page, username, password) => {
+  const logoutButton = page.getByRole('button', { name: 'logout' })
+
+  // If already logged in, do nothing
+  if (await logoutButton.count() > 0) {
+    return
+  }
+
+  const loginButton = page.getByRole('button', { name: 'login' })
+  await expect(loginButton).toBeVisible()
+  await loginButton.click()
+
+  await page.getByLabel('username').fill(username)
+  await page.getByLabel('password').fill(password)
+
+  await page.getByRole('button', { name: 'login' }).click()
+
+  // Wait for login to complete
+  await expect(page.getByRole('button', { name: 'logout' })).toBeVisible()
+}
+
+const attemptLogin = async (page, username, password) => {
   await page.getByRole('button', { name: 'login' }).click()
   await page.getByLabel('username').fill(username)
   await page.getByLabel('password').fill(password)
@@ -14,6 +35,7 @@ const ceaateBlog = async (page, title, author, url) => {
   await page.getByLabel('author:').fill(author)
   await page.getByLabel('url:').fill(url)
 
+  // Prepare to capture the response for blog creation
   const responsePromise = page.waitForResponse(response =>
     response.url().includes('/api/blogs') && response.request().method() === 'POST'
   )
@@ -41,4 +63,12 @@ const createBlogWithLikes = async (request, blog, likes, token) => {
   })
 }
 
-export { loginWith, ceaateBlog, createBlogWithLikes }
+const openBlog = async (page, blogId) => {
+  const blog = page.getByTestId(`blog-${blogId}`)
+
+  if (await blog.getByRole('button', { name: 'view' }).isVisible()) {
+    await blog.getByRole('button', { name: 'view' }).click()
+  }
+}
+
+export { loginWith, ceaateBlog, createBlogWithLikes, openBlog, attemptLogin }

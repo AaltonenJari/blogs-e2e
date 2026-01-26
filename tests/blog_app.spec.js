@@ -1,5 +1,5 @@
 const { test, expect, beforeEach, describe } = require('@playwright/test')
-const { loginWith, ceaateBlog, createBlogWithLikes } = require('./helper')
+const { loginWith, ceaateBlog, createBlogWithLikes, openBlog, attemptLogin } = require('./helper')
 
 describe('Blog app', () => {
   let token
@@ -41,7 +41,7 @@ describe('Blog app', () => {
     })
 
     test('fails with wrong credentials', async ({ page }) => {
-      await loginWith(page, 'mluukkai', 'wrong')
+      await attemptLogin(page, 'mluukkai', 'wrong')
       await expect(page.getByText('wrong username or password')).toBeVisible()
     })
   })
@@ -58,8 +58,8 @@ describe('Blog app', () => {
     })
 
     test('user can like a blog', async ({ page }) => {
-      await ceaateBlog(page, 'Liking blogs', 'Like Author', 'http://like.dev')
-      await page.getByRole('button', { name: 'view' }).click()
+      const blogId = await ceaateBlog(page, 'Liking blogs', 'Like Author', 'http://like.dev')
+      await openBlog(page, blogId)
       const likeButton = page.getByRole('button', { name: 'like' })
       await likeButton.click()
       const likes = page.getByText('likes 1')
@@ -67,8 +67,8 @@ describe('Blog app', () => {
     })
 
     test('user can delete their blog', async ({ page }) => {
-      await ceaateBlog(page, 'Deleting blogs', 'Delete Author', 'http://delete.dev')
-      await page.getByRole('button', { name: 'view' }).click()
+      const blogId = await ceaateBlog(page, 'Deleting blogs', 'Delete Author', 'http://delete.dev')
+      await openBlog(page, blogId)
 
       // Handle confirmation dialog on delete before clicking delete button
       page.on('dialog', async dialog => {
@@ -84,7 +84,11 @@ describe('Blog app', () => {
     test('users cannot delete blogs created by others', async ({ page, request }) => {
       // Create a blog with the first user
       const blogId = await ceaateBlog(page, 'Other users blog', 'Other Author', 'http://other.dev')
-      await page.getByRole('button', { name: 'logout' }).click() 
+      await openBlog(page, blogId)
+
+      // Logout the first user
+      await page.getByRole('button', { name: 'logout' }).click()
+
       // Create a second user
       await request.post('http://localhost:3003/api/users', {
         data: { 
@@ -105,8 +109,12 @@ describe('Blog app', () => {
 
     test('only the user who created a blog can see the delete button', async ({ page, request }) => {
       // Create a blog with the first user
-      await ceaateBlog(page, 'Visibility of delete button', 'Visibility Author', 'http://visibility.dev') 
+      const blogId =await ceaateBlog(page, 'Visibility of delete button', 'Visibility Author', 'http://visibility.dev') 
+      await openBlog(page, blogId)
+
+      // Logout the first user
       await page.getByRole('button', { name: 'logout' }).click()
+      
       // Create a second user
       await request.post('http://localhost:3003/api/users', {
         data: { 
