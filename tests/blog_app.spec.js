@@ -27,6 +27,24 @@ describe('Blog app', () => {
     await page.goto('http://localhost:3000')
   })
 
+  test.only('add more users', async ({ request }) => {
+    await request.post('http://localhost:3003/api/users', {
+      data: {
+        name: 'Arto Hellas',
+        username: 'ahellas',
+        password: 'password123'
+      }
+    })
+    await request.post('http://localhost:3003/api/users', {
+      data: {
+        name: 'Venla Ruuska',
+        username: 'vruuska',
+        password: 'password456'
+      }
+    })
+  })
+
+
   test('Login form is shown', async ({ page }) => {
 	  await page.getByRole('button', { name: 'login' }).click()
 	
